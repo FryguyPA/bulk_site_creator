@@ -1,3 +1,4 @@
 site_name,site_address,rf_template_name,spoke_template_name,network_template_name,network_vars
-Roxy_Movie_Theatre,"2004 Main St, Northampton, PA 18067",Master_US_RF_Template,Master_US_Spoke_DHCP,Master_US_Switch_Template_12T,Roxy_Movie_Theatre.vars
-Walt_Disney_World,"1375 E Buena Vista Dr, Orlando, FL 32821",Master_US_RF_Template,Master_US_Spoke_DHCP,Master_US_Switch_Template_12T
+Roxy_Movie_Theatre,"2004 Main St, Northampton, PA 18067",us_template,,,Roxy_Movie_Theatre.vars
+Walt_Disney_World,"1375 E Buena Vista Dr, Orlando, FL 32830",us_template,,,
+Waikiki_Aqua,"2777 Kalakaua Ave, Honolulu, HI 96815",uk_template,,,

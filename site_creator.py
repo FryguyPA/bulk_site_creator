@@ -18,15 +18,33 @@ import json
 import sys
 from pprint import pprint
 from getpass import getuser
+import urllib3
+
+
+import logging
+
+# Configure the logging
+logging.basicConfig(
+    level=logging.INFO,  # Set the logging level
+    format='%(asctime)s - %(levelname)s - %(message)s',  # Set the log message format
+    handlers=[
+        logging.FileHandler('mist_api.log'),  # Log messages to a file
+        #logging.StreamHandler()  # Also print messages to the console
+    ]
+)
+
+# Turn off warnings to screen for insecure site ( Thanks Umbrella )
+# You only need this if you get an SSL error due to corporate security stuff
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # This can be used if you do not want to hard-code your ENV API key
 os.environ['GOOGLE_API_KEY'] = config.google_api_key
-
+os.environ['MIST_API_URL'] = config.mist_api_url
+os.environ['MIST_API_KEY'] = config.mist_api_key
+os.environ['MIST_ORG'] = config.mist_org
 
 # module import needs to occur after setting os.environ variable
 import geocoder
-
-
 
 class MistAPI(object):
     def __init__(self, host: str, org: str):
@@ -45,6 +63,7 @@ class MistAPIToken(MistAPI):
         super(MistAPIToken, self).__init__(host, org)
         self.mist_api_token = mist_api_token
         self.header = {"Authorization": f"Token {mist_api_token}"}
+        logging.info(f"Mist API Token: {mist_api_token}\n")
 
 
 class Mist:
@@ -64,10 +83,12 @@ class Mist:
         try:
             header = {**{"content-type": "application/json"}, **self.mistAPI.header}
             my_url = f"https://{self.mistAPI.host}{url}"
-            response = requests.get(my_url, headers=header)
+            response = requests.get(my_url, headers=header, verify=False)
+            logging.info(f'Response is {response}\n')
             return response
         except Exception as e:
             print(e)
+            logging.info(f'Got an error on response {e}\n')
             return None
 
     def http_post(self, url: str, body: dict):
@@ -81,8 +102,10 @@ class Mist:
         try:
             header = {**{"content-type": "application/json"}, **self.mistAPI.header}
             my_url = f"https://{self.mistAPI.host}{url}"
-            response = requests.post(my_url, headers=header, data=json.dumps(body))
+            response = requests.post(my_url, headers=header, data=json.dumps(body), verify=False)
+            logging.info(f'Response for http_post is {response}\n')
         except Exception as e:
+            logging.info(f'Got an error for http_post and it was {e}\n')
             print(e)
         return response
 
@@ -97,7 +120,7 @@ class Mist:
         try:
             header = {**{"content-type": "application/json"}, **self.mistAPI.header}
             my_url = f"https://{self.mistAPI.host}{url}"
-            response = requests.put(my_url, headers=header, data=json.dumps(body))
+            response = requests.put(my_url, headers=header, data=json.dumps(body), verify=False)
         except Exception as e:
             print(e)
         return response
@@ -208,7 +231,7 @@ class Mist:
         response = self.http_post(f"/api/v1/orgs/{self.mistAPI.org}/sites", body)
         return response
 
-    def update_site_vars(self, site_body, new_site_id):
+    def update_site(self, site_body, new_site_id):
         """
 
         :param body: properly formatted body for a site creation
@@ -292,17 +315,23 @@ def get_google_geoinfo(address: str):
         return None
 
 
-def main(argv):
+#def main(argv):
+def main():
     successful_sites = []
     failed_sites = []
     created_site_id = []
-    mist_api_key = argv.mist_api_key
-    org = argv.mist_org
+    created_site_id_list = []
+    mist_api_key = config.mist_api_key
+    org = config.mist_org
+    host = config.mist_api_url
+    '''
     if argv.mist_europe is not None:
         host = "api.eu.mist.com"
     else:
-        host = "api.mist.com"
+        host = "api.ac2.mist.com"
+    '''
     site_data = read_csv("sites.csv")
+    logging.info(f'Loaded {site_data}')
 
     # mist_api = MistAPIToken(host, mist_api_key)
     mist_api = MistAPIToken(host, org, mist_api_key)
@@ -350,30 +379,38 @@ def main(argv):
             new_site_id = mist_connector.get_site_by_name(site['site_name'])['id']
             # print(new_site_id)
 
+            logging.info(f'Checking for site variables \n - {site["network_vars"]=}')
             print(f'Checking for site variables \n - {site["network_vars"]}')
-            if site['network_vars'] != None:
+            if site['network_vars'] != '':
+                logging.info(f'If we are here, we have site vars?')
                 site_body['vars'] = get_site_vars((site['network_vars']))
-                pprint(site_body['vars'])
-
-            print('We are here...')
-
-
-            results = mist_connector.update_site_vars(site_body,new_site_id)
-            print(results)
+                logging.info(f"Site Body = {site_body['vars']}")
+                print('Applying site variables.\n')
+                results = mist_connector.update_site(site_body,new_site_id)
+            #print(results)
 
 
             created_site_id.append(f'{site["site_name"]} has ID {new_site_id}\n')
+            created_site_id_list.append(f'"{new_site_id}",')
             #time2pause()
 
         print("Successful sites: ")
         for site in successful_sites:
-            print(site['name'])
-        print("Failed Sites: ")
+            print(f'\t{site["name"]}')
+        print("\nFailed Sites: ")
         for site in failed_sites:
-            print(site['name'])
+            print(f'\t {site["name"]}')
 
+
+        print('\n\nWe created the following Sites and Site IDs.')
         for _site_ids in created_site_id:
-            print(_site_ids)
+            print(f'\t{_site_ids}')
+        logging.info(created_site_id_list)
+        with open("site_created.txt", 'w') as outfile:
+            for item in created_site_id_list:
+                item_new = item.replace('"',"")
+                item_new = item_new.strip(",")
+                outfile.write(f'{item_new}\n')
 
     else:
         print('Check API Key - key did not verify.\n')
@@ -398,8 +435,10 @@ def time2pause():
         sys.exit()
 
 if __name__ == '__main__':
-    my_parser = get_parser()
-    my_args = my_parser.parse_args()
-    print(my_args)
-    print(type(my_args))
-    main(my_args)
+    # Deprecated the below functions when moving all the data to the config.py file
+    #my_parser = get_parser()
+    #my_args = my_parser.parse_args()
+    #print(my_args)
+    #print(type(my_args))
+    #main(my_args)
+    main()

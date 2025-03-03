@@ -16,7 +16,7 @@ Site information can include RF Template, Network Template and Gateway Template.
 ## Usage:
 
 ```bash
-python ./site_creator.py -k <Mist API Key> -o <Mist Org ID>
+python ./site_creator.py
 ```
 
 This is a fork of the Jake Synder's script that can be found at:
@@ -32,3 +32,9 @@ Added the ability to push variables for newly created site - see Roxy_Movie_Thea
 ### Currently working on (Nov 2022)
 
 - Adding aptemplates, secpolicy, alarmtemp, and sitetemples
+
+### Additions March 2025
+
+- Updated config.py to also include org ID, API key, and all the URLs for the current MIST api sites
+- Added a script to delete sites that you created - the input from this is site_created.txt
+  This file is created when you run the site_creator.py script with a list of all the sites.
