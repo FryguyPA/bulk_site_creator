@@ -33,15 +33,21 @@ logging.basicConfig(
     ]
 )
 
-# Turn off warnings to screen for insecure site ( Thanks Umbrella )
-# You only need this if you get an SSL error due to corporate security stuff
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # This can be used if you do not want to hard-code your ENV API key
 os.environ['GOOGLE_API_KEY'] = config.google_api_key
 os.environ['MIST_API_URL'] = config.mist_api_url
 os.environ['MIST_API_KEY'] = config.mist_api_key
 os.environ['MIST_ORG'] = config.mist_org
+
+# Turn off warnings to screen for insecure site ( Thanks Umbrella )
+# You only need this if you get an SSL error due to corporate security stuff
+try:
+    if config.ssldisable=='yes':
+        print('Disabling SSL verification per config.py config')
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+except:
+    pass
 
 # module import needs to occur after setting os.environ variable
 import geocoder
@@ -293,6 +299,7 @@ def get_google_timezone(lat: float, lng: float):
         return None
 
 
+
 def get_google_geoinfo(address: str):
     """
 
@@ -315,8 +322,46 @@ def get_google_geoinfo(address: str):
         return None
 
 
+import requests
+
+
+def check_google_maps_api_key(api_key):
+    """Checks if the Google Maps API key is valid."""
+    url = f"https://maps.googleapis.com/maps/api/geocode/json?address=New+York&key={api_key}"
+
+    try:
+        response = requests.get(url)
+        data = response.json()
+
+        if response.status_code == 200:
+            if data.get("status") == "OK":
+                print("✅ API key is valid.")
+                return True
+            elif data.get("status") in ["REQUEST_DENIED", "INVALID_REQUEST"]:
+                print(f"❌ Invalid API key: {data.get('error_message')}")
+                return False
+            else:
+                print(f"⚠️ Unexpected response: {data}")
+                return False
+        else:
+            print(f"❌ Failed to connect: HTTP {response.status_code}")
+            return False
+
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Error: {e}")
+        return False
+
+
+
+
 #def main(argv):
 def main():
+    google_api_ok = check_google_maps_api_key(config.google_api_key)
+    if google_api_ok is False:
+        print('Google API key fails, check API key or IP security at https://console.cloud.google.com/google/maps-apis/ \n')
+        exit()
+    else:
+        pass
     successful_sites = []
     failed_sites = []
     created_site_id = []

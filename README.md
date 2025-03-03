@@ -11,6 +11,8 @@ Site information can include RF Template, Network Template and Gateway Template.
   - This should be set as a local envirmental variable of GOOLE_API_KEY
     - MAC = export [variable_name]=[variable_value]
     - Windows = set [variable_name]=[variable_valuie]
+  - Be sure to secure your Google APi key to IP addresses
+    - https://console.cloud.google.com/google/maps-apis/credentials?
 - CSV with the following fields `site_name`, `site_address` with option fields `rf_template_name` and/or `spoke_template_name` and/or `network_template_name`
 
 ## Usage:
@@ -38,3 +40,4 @@ Added the ability to push variables for newly created site - see Roxy_Movie_Thea
 - Updated config.py to also include org ID, API key, and all the URLs for the current MIST api sites
 - Added a script to delete sites that you created - the input from this is site_created.txt
   This file is created when you run the site_creator.py script with a list of all the sites.
+- Added a way to check google API key as if when fails, sites are not created correctly.
